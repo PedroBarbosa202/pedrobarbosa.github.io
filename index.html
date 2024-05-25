@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circunference Simulator</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden; 
+        background-color: black;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        position: relative;
+    }
+
+
+    .point {
+        width: 15px;
+        height: 15px;
+        background-color: red;
+        position: absolute;
+        border-radius: 50%;
+    }
+
+    .axis {
+        width: 6px;
+        height: 20px; 
+        background-color: white;
+        position: absolute;
+        transform-origin: top; 
+        border-radius: 25%;
+    }
+
+    .line {
+        width: 10px;
+        position: absolute;
+        background-color: white;
+        z-index: -1;
+    }
+
+    .trail {
+        width: 10px;
+        height: 10px;
+        background-color: rgba(253, 0, 0, 0.5); /* Semi-transparent red */
+        position: absolute;
+        border-radius: 50%;
+    }
+
+    .AddPoint:hover
+    {
+        background-color: rgba(255, 0, 0, 0.5); /* Semi-transparent red */
+        color: white;
+        user-select: none;
+    }
+    .AddPoint:active {
+        transform: translateY(4px);
+        box-shadow: 0 5px #232323;
+    }
+
+    .RemovePoint:hover
+    {
+        background-color: rgba(255, 0, 0, 0.5); /* Semi-transparent red */
+        color: white;
+        user-select: none;
+    }
+    .RemovePoint:active {
+        transform: translateY(4px);
+        box-shadow: 0 5px #232323;
+    }
+
+    .ClearLines:hover
+    {
+        background-color: rgba(255, 0, 0, 0.5); /* Semi-transparent red */
+        color: white;
+        user-select: none;
+        
+    }
+    .ClearLines:active {
+        transform: translateY(4px);
+        box-shadow: 0 5px #232323;
+    }
+
+
+
+
+    .control-panel {
+        position: absolute;
+        bottom: 2%;
+        left: 2%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .control-panel input, .control-panel p, .control-panel div {
+        background-color: azure;
+        padding: 5px;
+        border-radius: 5px;
+    }
+
+    .control-panel p {
+        color: black;
+        margin: 0;
+    }
+
+    .control-panel div {
+        cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+        .control-panel {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .control-panel input, .control-panel p, .control-panel div {
+            width: 80px;
+            text-align: center;
+        }
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="axis"></div>
+<canvas id="trailCanvas" width="8000" height="6000"></canvas>
+
+<div class="control-panel">
+    <div class="AddPoint" onclick="AddPoint()">Add Point</div>
+    <div class="RemovePoint" onclick="RemovePoint()">Remove Point</div>
+    <div class="ClearLines" onclick="ClearTrail()">Clear Trail</div>
+    <div>
+        <p>Radius</p>
+        <input type="number" class="Radius" id="Radius"></input>
+    </div>
+    <div>
+        <p>Speed X</p>
+        <input type="number" class="SpeedX" id="SpeedX"></input>
+    </div>
+    <div>
+        <p>Speed Y</p>
+        <input type="number" class="SpeedY" id="SpeedY"></input>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('trailCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const axis = document.querySelector('.axis');
+    let axisCenterX = window.innerWidth / 2;
+    let axisCenterY = window.innerHeight / 2;
+    axis.style.left = `${axisCenterX - axis.offsetWidth / 2}px`;
+    axis.style.top = `${axisCenterY - axis.offsetHeight / 2}px`;
+
+    let angle = 0;
+
+    const Radius = [];
+    const SpeedX = [];
+    const SpeedY = [];
+    
+    let AllAxis = document.querySelectorAll('[id="AxisPoint"]');
+    
+    let TrailPathX = [];
+    let TrailPathY = [];
+
+    function rotatePoint() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let x = 0;
+        let y = 0;
+
+        for(let i = 0; i < AllAxis.length; i++) {
+            if(i - 1 >= 0) {
+                x = AllAxis[i-1].offsetLeft + AllAxis[i-1].offsetWidth / 2 + Radius[i] * Math.cos((angle * SpeedX[i]) * Math.PI / 180);
+                y = AllAxis[i-1].offsetTop + Radius[i] * Math.sin((angle * SpeedY[i]) * Math.PI / 180);
+            } else {
+                x = axisCenterX + Radius[i] * Math.cos((angle * SpeedX[i]) * Math.PI / 180);
+                y = axisCenterY + Radius[i] * Math.sin((angle * SpeedY[i]) * Math.PI / 180);
+            }
+
+            AllAxis[i].style.left = x + 'px';
+            AllAxis[i].style.top = y + 'px';
+
+            if(i > 0) {
+                drawLine(AllAxis[i-1].offsetLeft + AllAxis[i-1].offsetWidth / 2, AllAxis[i-1].offsetTop, AllAxis[i].offsetLeft + AllAxis[i].offsetWidth / 2, AllAxis[i].offsetTop);
+            } else {
+                drawLine(axisCenterX, axisCenterY, AllAxis[i].offsetLeft + AllAxis[i].offsetWidth / 2, AllAxis[i].offsetTop);
+            }
+
+            if(i === AllAxis.length - 1) {
+                TrailPathX.push(x);
+                TrailPathY.push(y);
+            }
+        }
+
+        drawTrail();
+
+        angle += 1;
+        requestAnimationFrame(rotatePoint);
+    }
+
+    function drawTrail() {
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2; 
+
+        for(let i = 0; i < TrailPathX.length - 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(TrailPathX[i] + 5, TrailPathY[i] + 5);
+            ctx.lineTo(TrailPathX[i + 1] + 5, TrailPathY[i + 1] + 5);
+            ctx.stroke();
+        }
+ 
+    }
+
+    function drawLine(FirstX, FirstY, LastX, LastY) {
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2; 
+
+        ctx.beginPath();
+        ctx.moveTo(FirstX, FirstY + 5);
+        ctx.lineTo(LastX, LastY + 5);
+        ctx.stroke();
+    }
+
+    function AddPoint() {
+        const point = document.createElement('div');
+        point.classList.add('point');
+        point.setAttribute('id', 'AxisPoint');
+        point.style.left = `${axisCenterX - point.offsetWidth / 2}px`;
+        point.style.top = `${axisCenterY - point.offsetHeight / 2}px`;
+        document.body.appendChild(point);
+
+        Radius.push(parseFloat(document.getElementById("Radius").value) || 0);
+        SpeedX.push(parseFloat(document.getElementById("SpeedX").value) || 0);
+        SpeedY.push(parseFloat(document.getElementById("SpeedY").value) || 0);
+
+        AllAxis = document.querySelectorAll('[id="AxisPoint"]');
+    }
+
+    function RemovePoint() {
+        if (AllAxis.length > 0) {
+            document.body.removeChild(AllAxis[AllAxis.length - 1]);
+            Radius.pop();
+            SpeedX.pop();
+            SpeedY.pop();
+            AllAxis = document.querySelectorAll('[id="AxisPoint"]');
+        }
+    }
+
+    function ClearTrail() {
+        TrailPathX = [];
+        TrailPathY = [];
+    }
+
+    window.addEventListener('resize', () => {
+        axisCenterX = window.innerWidth / 2;
+        axisCenterY = window.innerHeight / 2;
+        axis.style.left = `${axisCenterX - axis.offsetWidth / 2}px`;
+        axis.style.top = `${axisCenterY - axis.offsetHeight / 2}px`;
+    });
+
+    rotatePoint();
+</script>
+</body>
+</html>
